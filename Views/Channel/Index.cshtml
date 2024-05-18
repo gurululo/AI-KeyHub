@@ -1,0 +1,251 @@
+@model List<AI_KeyHub.Models.ViewModels.ChannelViewModel>
+@{
+    ViewData["Title"] = "AI 渠道管理";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold text-dark mb-1">AI 渠道管理</h3>
+        <p class="text-muted small mb-0">管理企业接入的各类 OpenAI 兼容 AI 模型服务商渠道配置。</p>
+    </div>
+    <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createChannelModal">
+        <span class="me-1">+</span> 添加新渠道
+    </button>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        @if (Model == null || !Model.Any())
+        {
+            <div class="text-center py-5">
+                <div class="text-muted mb-3" style="font-size: 2.5rem;">📡</div>
+                <h5 class="text-muted">暂无 AI 渠道配置</h5>
+                <p class="text-secondary small mb-3">点击右上角按钮添加您的第一个 AI 模型渠道</p>
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createChannelModal">
+                    立即添加渠道
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">渠道名称</th>
+                            <th>绑定模型</th>
+                            <th>API 地址</th>
+                            <th>上游 API Key</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th class="text-end pe-4">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var channel in Model)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-semibold text-dark">@channel.Name</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">ID: @channel.Id</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-primary border border-primary-subtle fw-normal">
+                                        @channel.Model
+                                    </span>
+                                </td>
+                                <td>
+                                    <code class="text-secondary small">@channel.BaseUrl</code>
+                                </td>
+                                <td>
+                                    <span class="font-monospace text-muted small bg-light px-2 py-1 rounded border">
+                                        @channel.MaskedApiKey
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (channel.IsEnabled)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">已启用</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">已禁用</span>
+                                    }
+                                </td>
+                                <td class="text-muted small">
+                                    @(channel.CreatedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "-")
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-secondary edit-channel-btn" 
+                                                data-id="@channel.Id"
+                                                data-name="@channel.Name"
+                                                data-baseurl="@channel.BaseUrl"
+                                                data-model="@channel.Model"
+                                                data-enabled="@channel.IsEnabled.ToString().ToLower()">
+                                            编辑
+                                        </button>
+                                        
+                                        <form asp-controller="Channel" asp-action="Toggle" asp-route-id="@channel.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn @(channel.IsEnabled ? "btn-outline-warning" : "btn-outline-success")">
+                                                @(channel.IsEnabled ? "禁用" : "启用")
+                                            </button>
+                                        </form>
+
+                                        <button type="button" class="btn btn-outline-danger delete-channel-btn"
+                                                data-id="@channel.Id"
+                                                data-name="@channel.Name">
+                                            删除
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- 添加渠道模态框 -->
+<div class="modal fade" id="createChannelModal" tabindex="-1" aria-labelledby="createChannelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form asp-controller="Channel" asp-action="Create" method="post" autocomplete="off">
+                @Html.AntiForgeryToken()
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="createChannelModalLabel">添加新渠道</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">渠道名称 <span class="text-danger">*</span></label>
+                        <input type="text" name="Name" class="form-control" required placeholder="如：官方 OpenAI、Azure 代理" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">API 地址 <span class="text-danger">*</span></label>
+                        <input type="url" name="BaseUrl" class="form-control" required placeholder="如：https://api.openai.com" />
+                        <div class="form-text small">OpenAI 兼容协议基础端点地址</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">模型名称 <span class="text-danger">*</span></label>
+                        <input type="text" name="Model" class="form-control" required placeholder="如：gpt-4o、claude-3-5-sonnet" />
+                        <div class="form-text small">该渠道支持调用的目标模型标识</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">上游 API Key <span class="text-danger">*</span></label>
+                        <input type="password" name="ApiKey" class="form-control font-monospace" required placeholder="sk-..." />
+                        <div class="form-text small">服务商提供的上游访问凭证，系统将安全加密脱敏保存</div>
+                    </div>
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" name="IsEnabled" value="true" checked id="createIsEnabled">
+                        <label class="form-check-label fw-semibold" for="createIsEnabled">立即启用此渠道</label>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">确认添加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑渠道模态框 -->
+<div class="modal fade" id="editChannelModal" tabindex="-1" aria-labelledby="editChannelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form asp-controller="Channel" asp-action="Edit" method="post" autocomplete="off">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="editChannelId" />
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="editChannelModalLabel">编辑 AI 渠道</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">渠道名称 <span class="text-danger">*</span></label>
+                        <input type="text" name="Name" id="editChannelName" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">API 地址 <span class="text-danger">*</span></label>
+                        <input type="url" name="BaseUrl" id="editChannelBaseUrl" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">模型名称 <span class="text-danger">*</span></label>
+                        <input type="text" name="Model" id="editChannelModel" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">上游 API Key</label>
+                        <input type="password" name="ApiKey" id="editChannelApiKey" class="form-control font-monospace" placeholder="留空则保持原密钥不变" />
+                        <div class="form-text small">若无需更换密钥，请直接留空</div>
+                    </div>
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" name="IsEnabled" value="true" id="editChannelIsEnabled">
+                        <label class="form-check-label fw-semibold" for="editChannelIsEnabled">启用此渠道</label>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">保存修改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteChannelModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form asp-controller="Channel" asp-action="Delete" method="post" id="deleteChannelForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="deleteChannelId" />
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold">确认删除渠道</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-0">您确定要删除渠道 <strong id="deleteChannelName" class="text-danger"></strong> 吗？</p>
+                    <p class="text-muted small mt-2 mb-0">删除后不可恢复，且绑定该渠道的内部 API Key 将无法再调用此服务。</p>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-danger">确认删除</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 编辑渠道事件绑定
+            const editModal = new bootstrap.Modal(document.getElementById('editChannelModal'));
+            document.querySelectorAll('.edit-channel-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.getElementById('editChannelId').value = this.dataset.id;
+                    document.getElementById('editChannelName').value = this.dataset.name;
+                    document.getElementById('editChannelBaseUrl').value = this.dataset.baseurl;
+                    document.getElementById('editChannelModel').value = this.dataset.model;
+                    document.getElementById('editChannelApiKey').value = '';
+                    document.getElementById('editChannelIsEnabled').checked = (this.dataset.enabled === 'true');
+                    editModal.show();
+                });
+            });
+
+            // 删除渠道事件绑定
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteChannelModal'));
+            document.querySelectorAll('.delete-channel-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.getElementById('deleteChannelId').value = this.dataset.id;
+                    document.getElementById('deleteChannelName').textContent = this.dataset.name;
+                    deleteModal.show();
+                });
+            });
+        });
+    </script>
+}

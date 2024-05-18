@@ -10,6 +10,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<IDataStorage, JsonDataStorage>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IChannelService, ChannelService>();
 
 // Configure Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
