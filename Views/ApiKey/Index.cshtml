@@ -1,0 +1,287 @@
+@model List<AI_KeyHub.Models.ViewModels.ApiKeyViewModel>
+@{
+    ViewData["Title"] = "内部 API Key 管理";
+    var channels = ViewBag.Channels as List<AI_KeyHub.Models.Channel> ?? new List<AI_KeyHub.Models.Channel>();
+    var newKeyPlain = TempData["NewKey_Plain"] as string;
+    var newKeyName = TempData["NewKey_Name"] as string;
+    var newKeyChannel = TempData["NewKey_Channel"] as string;
+    var newKeyModel = TempData["NewKey_Model"] as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold text-dark mb-1">内部 API Key 管理</h3>
+        <p class="text-muted small mb-0">向企业内部服务或员工分发独立的 API 访问密钥，并限制其仅可调用指定渠道的模型。</p>
+    </div>
+    <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createKeyModal">
+        <span class="me-1">+</span> 创建 API Key
+    </button>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        @if (Model == null || !Model.Any())
+        {
+            <div class="text-center py-5">
+                <div class="text-muted mb-3" style="font-size: 2.5rem;">🔑</div>
+                <h5 class="text-muted">暂无内部 API Key</h5>
+                <p class="text-secondary small mb-3">点击右上角按钮创建第一个内部 API 访问凭据</p>
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createKeyModal">
+                    立即创建 Key
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Key 名称 / 备注</th>
+                            <th>绑定渠道</th>
+                            <th>授权允许模型</th>
+                            <th>API Key (脱敏)</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th class="text-end pe-4">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var key in Model)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-semibold text-dark">@key.Name</div>
+                                    @if (!string.IsNullOrWhiteSpace(key.Remarks))
+                                    {
+                                        <div class="text-muted small text-truncate" style="max-width: 200px;">@key.Remarks</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-muted fst-italic" style="font-size: 0.75rem;">无备注</div>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="fw-medium text-dark me-2">@key.ChannelName</span>
+                                        @if (!key.ChannelEnabled)
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle small" title="所绑定的渠道当前已被禁用">渠道禁用</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle fw-normal">
+                                        @key.BoundModel
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="font-monospace text-muted small bg-light px-2 py-1 rounded border">
+                                        @key.MaskedKey
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (key.IsEnabled)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">已启用</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">已禁用</span>
+                                    }
+                                </td>
+                                <td class="text-muted small">
+                                    @key.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group btn-group-sm">
+                                        <form asp-controller="ApiKey" asp-action="Toggle" asp-route-id="@key.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn @(key.IsEnabled ? "btn-outline-warning" : "btn-outline-success")">
+                                                @(key.IsEnabled ? "禁用" : "启用")
+                                            </button>
+                                        </form>
+
+                                        <button type="button" class="btn btn-outline-danger delete-key-btn"
+                                                data-id="@key.Id"
+                                                data-name="@key.Name">
+                                            删除
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- 创建 API Key 模态框 -->
+<div class="modal fade" id="createKeyModal" tabindex="-1" aria-labelledby="createKeyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form asp-controller="ApiKey" asp-action="Create" method="post" autocomplete="off">
+                @Html.AntiForgeryToken()
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="createKeyModalLabel">创建内部 API Key</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Key 名称 <span class="text-danger">*</span></label>
+                        <input type="text" name="Name" class="form-control" required placeholder="如：研发部-知识库项目组" />
+                        <div class="form-text small">便于识别调用方身份的简短名称</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">绑定 AI 渠道 <span class="text-danger">*</span></label>
+                        <select name="ChannelId" class="form-select" required>
+                            <option value="">-- 请选择绑定的渠道 --</option>
+                            @foreach (var ch in channels)
+                            {
+                                <option value="@ch.Id">
+                                    @ch.Name (模型: @ch.Model) @(ch.IsEnabled ? "" : " [已禁用]")
+                                </option>
+                            }
+                        </select>
+                        <div class="form-text small">内部 Key 只能调用其绑定渠道所配置的 AI 模型</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">备注信息</label>
+                        <textarea name="Remarks" class="form-control" rows="3" placeholder="可选填写使用者、项目背景或负责人联系方式"></textarea>
+                    </div>
+                    <div class="alert alert-info py-2 px-3 small mb-0">
+                        <strong>安全提示：</strong> API Key 创建后完整密钥<strong>仅展示一次</strong>，请在创建后立即复制保存。
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary" @(channels.Any() ? "" : "disabled")>确认创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 一次性完整密钥展示模态框 (仅在创建成功后触发) -->
+@if (!string.IsNullOrEmpty(newKeyPlain))
+{
+    <div class="modal fade" id="revealKeyModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="revealKeyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold" id="revealKeyModalLabel">🎉 API Key 创建成功</h5>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-warning border-warning d-flex align-items-center mb-3" role="alert">
+                        <div>
+                            <strong>请妥善保存此密钥！</strong><br />
+                            出于安全考虑，系统不会明文保存该密钥，<strong>此完整密钥仅展示一次</strong>。窗口关闭后将无法再次查看完整内容。
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary small">Key 名称</label>
+                        <div class="fw-bold text-dark">@newKeyName</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary small">授权渠道与模型</label>
+                        <div>
+                            <span class="badge bg-primary me-2">@newKeyChannel</span>
+                            <span class="badge bg-info text-dark">@newKeyModel</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary small">完整 API Key</label>
+                        <div class="input-group">
+                            <input type="text" id="plainKeyInput" class="form-control font-monospace bg-light fw-bold text-primary" value="@newKeyPlain" readonly />
+                            <button class="btn btn-outline-primary" type="button" id="copyKeyBtn">
+                                复制密钥
+                            </button>
+                        </div>
+                        <div id="copySuccessMsg" class="text-success small mt-1" style="display: none;">已成功复制到剪贴板！</div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">我已妥善保存，关闭窗口</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteKeyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form asp-controller="ApiKey" asp-action="Delete" method="post" id="deleteKeyForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="deleteKeyId" />
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold">确认删除 API Key</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-0">您确定要删除 API Key <strong id="deleteKeyName" class="text-danger"></strong> 吗？</p>
+                    <p class="text-muted small mt-2 mb-0">删除后使用该 Key 的所有应用和接口请求将立即失效且不可恢复。</p>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-danger">确认删除</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 一次性密钥展示自动弹出
+            const revealModalEl = document.getElementById('revealKeyModal');
+            if (revealModalEl) {
+                const revealModal = new bootstrap.Modal(revealModalEl);
+                revealModal.show();
+
+                const copyBtn = document.getElementById('copyKeyBtn');
+                const plainInput = document.getElementById('plainKeyInput');
+                const copySuccessMsg = document.getElementById('copySuccessMsg');
+
+                copyBtn.addEventListener('click', function () {
+                    plainInput.select();
+                    navigator.clipboard.writeText(plainInput.value).then(function () {
+                        copyBtn.textContent = '已复制!';
+                        copyBtn.classList.remove('btn-outline-primary');
+                        copyBtn.classList.add('btn-success');
+                        copySuccessMsg.style.display = 'block';
+                        setTimeout(function () {
+                            copyBtn.textContent = '复制密钥';
+                            copyBtn.classList.remove('btn-success');
+                            copyBtn.classList.add('btn-outline-primary');
+                        }, 2500);
+                    }).catch(function () {
+                        // 回退选中文本
+                        document.execCommand('copy');
+                        copySuccessMsg.style.display = 'block';
+                    });
+                });
+            }
+
+            // 删除 Key 事件绑定
+            const deleteModalEl = document.getElementById('deleteKeyModal');
+            if (deleteModalEl) {
+                const deleteModal = new bootstrap.Modal(deleteModalEl);
+                document.querySelectorAll('.delete-key-btn').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        document.getElementById('deleteKeyId').value = this.dataset.id;
+                        document.getElementById('deleteKeyName').textContent = this.dataset.name;
+                        deleteModal.show();
+                    });
+                });
+            }
+        });
+    </script>
+}
