@@ -12,6 +12,13 @@ builder.Services.AddSingleton<IDataStorage, JsonDataStorage>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IChannelService, ChannelService>();
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
+builder.Services.AddScoped<IChatProxyService, ChatProxyService>();
+
+// Configure HttpClient for upstream AI services
+builder.Services.AddHttpClient("UpstreamClient", client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
 
 // Configure Cookie Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
