@@ -1,8 +1,279 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model AI_KeyHub.Models.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "控制台概览";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="mb-4">
+    <h3 class="fw-bold text-dark mb-1">控制台概览</h3>
+    <p class="text-muted small mb-0">欢迎使用 AI-KeyHub 企业统一 AI API 接入与管理平台。</p>
 </div>
+
+<!-- 核心统计指标卡片 -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-3 stat-card h-100">
+            <div class="card-body p-3 d-flex align-items-center">
+                <div class="stat-icon bg-primary-subtle text-primary rounded-3 p-3 me-3">
+                    <span style="font-size: 1.5rem;">📡</span>
+                </div>
+                <div>
+                    <div class="text-muted small fw-medium">AI 渠道总数</div>
+                    <div class="fs-4 fw-bold text-dark">@Model.TotalChannels</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-3 stat-card h-100">
+            <div class="card-body p-3 d-flex align-items-center">
+                <div class="stat-icon bg-success-subtle text-success rounded-3 p-3 me-3">
+                    <span style="font-size: 1.5rem;">⚡</span>
+                </div>
+                <div>
+                    <div class="text-muted small fw-medium">已启用渠道</div>
+                    <div class="fs-4 fw-bold text-success">@Model.ActiveChannels</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-3 stat-card h-100">
+            <div class="card-body p-3 d-flex align-items-center">
+                <div class="stat-icon bg-info-subtle text-info rounded-3 p-3 me-3">
+                    <span style="font-size: 1.5rem;">🔑</span>
+                </div>
+                <div>
+                    <div class="text-muted small fw-medium">内部 Key 总数</div>
+                    <div class="fs-4 fw-bold text-dark">@Model.TotalApiKeys</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm rounded-3 stat-card h-100">
+            <div class="card-body p-3 d-flex align-items-center">
+                <div class="stat-icon bg-warning-subtle text-warning rounded-3 p-3 me-3">
+                    <span style="font-size: 1.5rem;">🛡️</span>
+                </div>
+                <div>
+                    <div class="text-muted small fw-medium">有效 Key 数量</div>
+                    <div class="fs-4 fw-bold text-warning-emphasis">@Model.ActiveApiKeys</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- 快捷入口与接入端点 -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                <h5 class="fw-bold text-dark mb-0">统一接入端点</h5>
+            </div>
+            <div class="card-body px-4 py-3">
+                <p class="text-muted small mb-3">
+                    企业内部服务、应用或开发测试人员统一使用以下 OpenAI 兼容端点进行 AI 交互，系统将根据 Key 自动路由至对应上游渠道。
+                </p>
+
+                <div class="mb-3">
+                    <label class="form-label text-secondary small fw-semibold">Chat Completions 端点</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control font-monospace bg-light" id="endpointInput" value="@Model.ApiEndpointUrl" readonly />
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyText('endpointInput', this)">复制端点</button>
+                    </div>
+                </div>
+
+                <div class="alert alert-light border small text-secondary mb-3">
+                    <div class="fw-bold text-dark mb-1">接入注意事项：</div>
+                    <ul class="ps-3 mb-0">
+                        <li>认证头格式：<code>Authorization: Bearer &lt;内部 API Key&gt;</code></li>
+                        <li>模型一致性：每个内部 Key 仅可调用其绑定渠道所允许的模型</li>
+                        <li>流式传输支持：在请求体中传入 <code>"stream": true</code> 即可开启 SSE 实时流式响应</li>
+                    </ul>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a asp-controller="Channel" asp-action="Index" class="btn btn-outline-primary btn-sm px-3">管理 AI 渠道</a>
+                    <a asp-controller="ApiKey" asp-action="Index" class="btn btn-primary btn-sm px-3">创建内部 Key</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 调用示例代码 -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold text-dark mb-0">标准调用示例 (cURL)</h5>
+                <button class="btn btn-sm btn-outline-primary py-0" onclick="copySnippet('curlCode', this)">复制代码</button>
+            </div>
+            <div class="card-body px-4 py-3">
+                <pre class="bg-dark text-light p-3 rounded-3 small font-monospace mb-0" style="overflow-x: auto; max-height: 260px;" id="curlCode">curl -X POST "@Model.ApiEndpointUrl" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-hub-xxxxxxxxxxxxxxxx" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [
+      {
+        "role": "user",
+        "content": "你好，请介绍一下你自己！"
+      }
+    ],
+    "stream": false
+  }'</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 最新配置列表 -->
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold text-dark mb-0">最新渠道配置</h6>
+                <a asp-controller="Channel" asp-action="Index" class="small text-decoration-none">查看全部 &rarr;</a>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.RecentChannels.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light small">
+                                <tr>
+                                    <th class="ps-4">渠道</th>
+                                    <th>模型</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in Model.RecentChannels)
+                                {
+                                    <tr>
+                                        <td class="ps-4">
+                                            <div class="fw-semibold text-dark small">@c.Name</div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">@c.BaseUrl</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-primary border small">@c.Model</span>
+                                        </td>
+                                        <td>
+                                            @if (c.IsEnabled)
+                                            {
+                                                <span class="badge bg-success-subtle text-success small">启用</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary-subtle text-secondary small">禁用</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="p-4 text-center text-muted small">暂无渠道数据</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-2 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold text-dark mb-0">最新分配 Key</h6>
+                <a asp-controller="ApiKey" asp-action="Index" class="small text-decoration-none">查看全部 &rarr;</a>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.RecentApiKeys.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light small">
+                                <tr>
+                                    <th class="ps-4">名称</th>
+                                    <th>授权模型</th>
+                                    <th>密钥</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var k in Model.RecentApiKeys)
+                                {
+                                    <tr>
+                                        <td class="ps-4">
+                                            <div class="fw-semibold text-dark small">@k.Name</div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">@k.ChannelName</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-info-emphasis border small">@k.BoundModel</span>
+                                        </td>
+                                        <td>
+                                            <code class="text-secondary small">@k.MaskedKey</code>
+                                        </td>
+                                        <td>
+                                            @if (k.IsEnabled)
+                                            {
+                                                <span class="badge bg-success-subtle text-success small">启用</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary-subtle text-secondary small">禁用</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="p-4 text-center text-muted small">暂无 API Key 数据</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function copyText(elementId, btn) {
+            const input = document.getElementById(elementId);
+            input.select();
+            navigator.clipboard.writeText(input.value).then(() => {
+                const oldText = btn.textContent;
+                btn.textContent = '已复制!';
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-success');
+                setTimeout(() => {
+                    btn.textContent = oldText;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-secondary');
+                }, 2000);
+            });
+        }
+
+        function copySnippet(elementId, btn) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const oldText = btn.textContent;
+                btn.textContent = '已复制!';
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-success');
+                setTimeout(() => {
+                    btn.textContent = oldText;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-primary');
+                }, 2000);
+            });
+        }
+    </script>
+}
