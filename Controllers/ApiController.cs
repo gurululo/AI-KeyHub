@@ -29,7 +29,6 @@ public class ApiController : ControllerBase
     }
 
     [HttpPost("/v1/chat/completions")]
-    [HttpPost("v1/chat/completions")]
     public async Task<IActionResult> ChatCompletions()
     {
         // 1. 验证客户端 Authorization Header 凭证
